@@ -25,7 +25,7 @@ Navigate into the cloned directory and install required Python packages:
 ### 3. Navigate to Project Directory
 
 ```bash
-%cd /kaggle/working/Max-MinContrastiveLearning
+%cd /kaggle/working/Max-MinContrastiveLearning/main
 ```
 
 ---
