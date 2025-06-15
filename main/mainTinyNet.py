@@ -8,7 +8,7 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 import svm_losses
-import utils  # This is your util.py file
+import tinyutils  # This is your util.py file
 from model import Model
 from termcolor import cprint
 
@@ -126,7 +126,7 @@ if __name__ == "__main__":
     dataset_name = args.dataset_name
 
     # Load subsampled datasets (should be 5000 training, 500 memory, 500 test images)
-    train_data, memory_data, test_data = utils.get_dataset(dataset_name, args.dataset_location)
+    train_data, memory_data, test_data = tinyutils.get_dataset(dataset_name, args.dataset_location)
 
     # Create DataLoaders using the subsampled datasets.
     train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True, num_workers=args.num_workers, pin_memory=True, drop_last=True)
