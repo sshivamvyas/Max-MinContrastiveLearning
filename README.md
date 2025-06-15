@@ -2,7 +2,7 @@
 
 # Max-Min Contrastive Learning
 
-This repository contains the implementation of **Max-Min Contrastive Learning (MMCL)** — a novel contrastive learning approach inspired by margin-based classifiers. MMCL improves contrastive learning by selecting the most informative negative samples using max-margin principles, enhancing both convergence and final performance.
+This repository contains the implementation of **Max-Min Contrastive Learning (MMCL)** — a contrastive learning approach inspired by margin-based classifiers. MMCL improves contrastive learning by selecting the most informative negative samples using max-margin principles, enhancing both convergence and final performance.
 
 ## Setup & Installation
 
