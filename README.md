@@ -1,20 +1,8 @@
-Here is your updated README with the reference added and **all emojis removed** for a clean, professional presentation:
 
----
 
 # Max-Min Contrastive Learning
 
 This repository contains the implementation of **Max-Min Contrastive Learning (MMCL)** — a novel contrastive learning approach inspired by margin-based classifiers. MMCL improves contrastive learning by selecting the most informative negative samples using max-margin principles, enhancing both convergence and final performance.
-
-## Project Structure
-
-* `main.py` – Training on CIFAR-100
-* `mainTinyNet.py` – Training on Tiny ImageNet
-* `criterions/` – Contrastive loss functions including `mmcl_pgd` and `MMCL_HardNegative`
-* `models/` – Model architectures
-* `utils/` – Helper functions (data loading, evaluation, etc.)
-
----
 
 ## Setup & Installation
 
@@ -114,6 +102,3 @@ Johns Hopkins University, MIT, Mitsubishi Electric Research Labs
 
 > Shah, A., Sra, S., Chellappa, R., & Cherian, A. (2023). *Max-Margin Contrastive Learning*. arXiv preprint arXiv:2302.00684.
 
----
-
-Let me know if you'd like a BibTeX citation or a section on experiment results and visualizations.
