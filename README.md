@@ -1,54 +1,119 @@
-Max-Min Contrastive Learning
-This repository contains the code for the Max-Min Contrastive Learning project.
+Here is your updated README with the reference added and **all emojis removed** for a clean, professional presentation:
 
-Setup and Installation
-To get started with this project, follow these steps:
+---
 
-Clone the Repository:
-Open your terminal or command prompt (or a Kaggle notebook cell) and clone the GitHub repository using the following command:
+# Max-Min Contrastive Learning
 
+This repository contains the implementation of **Max-Min Contrastive Learning (MMCL)** — a novel contrastive learning approach inspired by margin-based classifiers. MMCL improves contrastive learning by selecting the most informative negative samples using max-margin principles, enhancing both convergence and final performance.
+
+## Project Structure
+
+* `main.py` – Training on CIFAR-100
+* `mainTinyNet.py` – Training on Tiny ImageNet
+* `criterions/` – Contrastive loss functions including `mmcl_pgd` and `MMCL_HardNegative`
+* `models/` – Model architectures
+* `utils/` – Helper functions (data loading, evaluation, etc.)
+
+---
+
+## Setup & Installation
+
+### 1. Clone the Repository
+
+Run the following command in a terminal or Kaggle notebook cell:
+
+```bash
 !git clone https://github.com/sshivamvyas/Max-MinContrastiveLearning.git
+```
 
-Install Dependencies:
-Navigate into the cloned directory and install all necessary Python packages. If you're in a Kaggle notebook, you can run this directly in a cell:
+### 2. Install Dependencies
 
+Navigate into the cloned directory and install required Python packages:
+
+```bash
 !pip install numpy pandas opencv-python torch torchvision tqdm termcolor matplotlib Pillow scikit-learn
+```
 
-Navigate to Project Directory:
-Change your current working directory to the project's root:
+### 3. Navigate to Project Directory
 
+```bash
 %cd /kaggle/working/Max-MinContrastiveLearning
+```
 
-Usage
-Once you've set up the project, you can run the training scripts for different datasets.
+---
 
-Tiny ImageNet Dataset
-Note on Dataset: The Tiny ImageNet dataset is large and cannot be directly included in the GitHub repository. You will need to upload the dataset to your Kaggle environment.
+## Usage
 
-Please ensure the dataset is located at the following path in your Kaggle environment: /kaggle/input/tiny-image-net/tiny-imagenet-200.
+### Training on Tiny ImageNet
 
-You can find the dataset on Kaggle here: Tiny ImageNet Dataset Link
+#### Dataset Note:
 
-The base paper for this project utilized criterion_to_use=mmcl_pgd for its experiments.
+Due to size constraints, the Tiny ImageNet dataset is not included in this repository.
+Make sure the dataset is available at the following path in your Kaggle environment:
 
-To train the model on the Tiny ImageNet dataset for 100 epochs using mmcl_pgd as the criterion, use the following command:
+```
+/kaggle/input/tiny-image-net/tiny-imagenet-200
+```
 
+You can download the dataset from [Kaggle: Tiny ImageNet Dataset](https://www.kaggle.com/c/tiny-imagenet)
+
+#### Train with PGD-based Max-Min Contrastive Loss
+
+```bash
 !python mainTinyNet.py --criterion_to_use=mmcl_pgd --epochs=100
+```
 
-For a quicker test run with fewer epochs (e.g., 2 epochs) and more frequent validation (e.g., every epoch), you can modify the command like this:
+#### Quick Test Run (e.g., 2 epochs with validation after every epoch)
 
+```bash
 !python mainTinyNet.py --criterion_to_use=mmcl_pgd --epochs=2 --val_freq=1
+```
 
-Proposed Methodologies Testing: Hard Negative Mining
-For testing the Hard Negative Mining without PGD approach, which replaces expensive PGD optimization with top-k hardest negatives based on similarity within a batch (improving efficiency while still focusing on informative negatives), use the following command:
+#### Hard Negative Mining (No PGD)
 
+To use the efficient hard negative selection method:
+
+```bash
 !python mainTinyNet.py --criterion_to_use=MMCL_HardNegative --epochs=100
+```
 
-CIFAR-100 Dataset
-To train the model on the CIFAR-100 dataset for 100 epochs using mmcl_pgd as the criterion, run:
+---
 
+### Training on CIFAR-100
+
+#### Full Training (100 epochs)
+
+```bash
 !python main.py --criterion_to_use=mmcl_pgd --epochs=100
+```
 
-If you want to test with fewer epochs (e.g., 2 epochs), use this command:
+#### Quick Test (2 epochs)
 
+```bash
 !python main.py --criterion_to_use=mmcl_pgd --epochs=2 --val_freq=1
+```
+
+---
+
+## Notes
+
+* `mmcl_pgd`: Original MMCL loss with adversarial (PGD-based) negative selection
+* `MMCL_HardNegative`: Efficient variant using batch-wise hardest negatives
+* You can extend this framework to other datasets by modifying the data loader scripts
+
+---
+
+## Reference
+
+This repository is inspired by the following paper:
+
+**Max-Margin Contrastive Learning**
+Anshul Shah\*, Suvrit Sra, Rama Chellappa, Anoop Cherian†
+Johns Hopkins University, MIT, Mitsubishi Electric Research Labs
+[arXiv:2302.00684](https://arxiv.org/abs/2302.00684)
+
+> Shah, A., Sra, S., Chellappa, R., & Cherian, A. (2023). *Max-Margin Contrastive Learning*. arXiv preprint arXiv:2302.00684.
+
+---
+
+Let me know if you'd like a BibTeX citation or a section on experiment results and visualizations.
