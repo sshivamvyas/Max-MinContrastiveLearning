@@ -1,144 +1,117 @@
-from PIL import Image
-from torchvision import transforms
-from torchvision.datasets import ImageFolder
-import torch
-from torch.utils.data import Subset
-import random
-import cv2
-import numpy as np
 import os
+from PIL import Image
+from torchvision.datasets import ImageFolder
+from torchvision import transforms
+from torch.utils.data import DataLoader, Subset
+import random # Import the random module
+import numpy as np # Import numpy for shuffling and splitting
 
-class TinyImageNetPair_true_label(ImageFolder):
-    """
-    Data loader that samples pairs of images with the same label.
-    """
-    def __init__(self, root, transform=None):
-        super().__init__(root=root, transform=transform)
-        self.label_index = self._get_label_indices()
+# Define the TinyImageNet dataset class if it's not already defined elsewhere
+# This is a common way to load TinyImageNet, assuming its structure.
+class TinyImageNet(ImageFolder):
+    def __init__(self, root, train=True, transform=None):
+        """
+        Args:
+            root (string): Root directory of the TinyImageNet dataset.
+            train (bool): If True, loads the training set, otherwise loads the validation set.
+            transform (callable, optional): A function/transform that takes in an PIL image
+                and returns a transformed version.
+        """
+        self.root = root
+        self.transform = transform
+        self.train = train
 
-    def _get_label_indices(self):
-        label_dict = {}
-        for idx, (_, target) in enumerate(self.samples):
-            if target not in label_dict:
-                label_dict[target] = []
-            label_dict[target].append(idx)
-        return label_dict
-
-    def __getitem__(self, index):
-        path1, target = self.samples[index]
-        img1 = Image.open(path1).convert("RGB")
-
-        index_example_same_label = random.choice(self.label_index[target])
-        path2 = self.samples[index_example_same_label][0]
-        img2 = Image.open(path2).convert("RGB")
-
-        if self.transform:
-            pos_1 = self.transform(img1)
-            pos_2 = self.transform(img2)
+        if self.train:
+            self.data_path = os.path.join(self.root, 'train')
         else:
-            pos_1, pos_2 = img1, img2
+            # For TinyImageNet validation, images are in a flat folder and labels are in a file.
+            # We'll use ImageFolder assuming a pre-processed val directory structure like:
+            # val/
+            # ├── images/
+            # │   ├── val_0.JPEG
+            # │   ├── val_1.JPEG
+            # │   └── ...
+            # └── val_annotations.txt
+            # Or, if ImageFolder expects subdirectories per class, you might need to
+            # restructure your 'val' directory or use a custom dataset loading logic.
+            # For simplicity, we'll assume a structure compatible with ImageFolder
+            # if `root/val` itself contains class subdirectories.
+            # If not, a custom loading from val_annotations.txt is needed.
+            # Let's assume a common setup where 'val' is restructured or a simple ImageFolder works.
+            self.data_path = os.path.join(self.root, 'val')
+        
+        super().__init__(self.data_path, transform=self.transform)
+        # Store targets for easier access, as ImageFolder keeps them internally.
+        self.targets = [s[1] for s in self.samples]
 
-        return pos_1, pos_2, target, index
 
-class TinyImageNetPair(ImageFolder):
+def get_dataset(dataset_name, dataset_location):
     """
-    Data loader returning two augmented versions of the same image.
+    Loads and subsamples the specified dataset.
+    
+    Args:
+        dataset_name (str): The name of the dataset (e.g., "tiny_imagenet").
+        dataset_location (str): The root directory where the dataset is stored.
+
+    Returns:
+        tuple: (train_subset, memory_subset, test_subset) - Subsampled datasets.
     """
-    def __getitem__(self, index):
-        path, target = self.samples[index]
-        img = Image.open(path).convert("RGB")
+    if dataset_name == "tiny_imagenet":
+        # Define common transformations for TinyImageNet
+        train_transform = transforms.Compose([
+            transforms.RandomResizedCrop(64),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        ])
+        test_transform = transforms.Compose([
+            transforms.Resize(70),
+            transforms.CenterCrop(64),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        ])
 
-        if self.transform:
-            pos_1 = self.transform(img)
-            pos_2 = self.transform(img)
-        else:
-            pos_1, pos_2 = img, img
+        # Load the full TinyImageNet training and validation datasets
+        full_train_dataset = TinyImageNet(root=dataset_location, train=True, transform=train_transform)
+        full_val_dataset = TinyImageNet(root=dataset_location, train=False, transform=test_transform) # Use val for testing
 
-        return pos_1, pos_2, target, index
+        # Define the desired number of samples for each subset
+        num_train_samples = 5000
+        num_memory_samples = 500
+        num_test_samples = 500 # This will be taken from the validation set
 
-class GaussianBlur(object):
-    """
-    Implements Gaussian blur ensuring the kernel size is odd.
-    """
-    def __init__(self, kernel_size, min=0.1, max=2.0):
-        # Ensure kernel size is odd
-        if kernel_size % 2 == 0:
-            kernel_size += 1
-        self.kernel_size = kernel_size
-        self.min = min
-        self.max = max
+        # --- Generate indices for subsampling ---
+        # Ensure we have enough samples in the full datasets
+        if len(full_train_dataset) < (num_train_samples + num_memory_samples):
+            raise ValueError(
+                f"Not enough samples in training dataset ({len(full_train_dataset)}) "
+                f"to create {num_train_samples} train and {num_memory_samples} memory subsets."
+            )
+        if len(full_val_dataset) < num_test_samples:
+            raise ValueError(
+                f"Not enough samples in validation dataset ({len(full_val_dataset)}) "
+                f"to create {num_test_samples} test subset."
+            )
 
-    def __call__(self, sample):
-        sample = np.array(sample)
-        if np.random.random_sample() < 0.5:
-            sigma = (self.max - self.min) * np.random.random_sample() + self.min
-            sample = cv2.GaussianBlur(sample, (self.kernel_size, self.kernel_size), sigma)
-        return Image.fromarray(sample)
+        # Create a shuffled list of indices for the full training dataset
+        train_val_indices = list(range(len(full_train_dataset)))
+        random.shuffle(train_val_indices) # Shuffle to ensure random sampling
 
-class OxfordIIITPetDataset(ImageFolder):
-    """
-    Data loader for Oxford-IIIT Pet dataset.
-    """
-    def __init__(self, root, transform=None):
-        super().__init__(root=root, transform=transform)
+        # Allocate indices for training and memory subsets from the shuffled training indices
+        train_indices = train_val_indices[:num_train_samples]
+        memory_indices = train_val_indices[num_train_samples : num_train_samples + num_memory_samples]
 
-    def __getitem__(self, index):
-        path, target = self.samples[index]
-        img = Image.open(path).convert("RGB")
+        # Create indices for the test subset from the validation dataset
+        test_indices = list(range(len(full_val_dataset)))
+        random.shuffle(test_indices)
+        test_indices = test_indices[:num_test_samples]
 
-        if self.transform:
-            img = self.transform(img)
+        # Create the Subsets
+        train_data = Subset(full_train_dataset, train_indices)
+        memory_data = Subset(full_train_dataset, memory_indices)
+        test_data = Subset(full_val_dataset, test_indices) # Test data from validation set
 
-        return img, target, index
-
-# Define transforms
-train_transform = transforms.Compose([
-    transforms.RandomResizedCrop(64),
-    transforms.RandomHorizontalFlip(p=0.5),
-    transforms.RandomApply([transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)], p=0.8),
-    transforms.RandomGrayscale(p=0.2),
-    GaussianBlur(kernel_size=int(0.1 * 64) + 1),  # Ensures odd kernel size.
-    transforms.ToTensor(),
-    transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-])
-
-test_transform = transforms.Compose([
-    transforms.ToTensor(),
-    transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-])
-
-def get_dataset(dataset_name, dataset_location, pair=True):
-    if pair:
-        if dataset_name == 'tiny_imagenet':
-            train_data = TinyImageNetPair(root=os.path.join(dataset_location, "train"), transform=train_transform)
-            memory_data = TinyImageNetPair(root=os.path.join(dataset_location, "train"), transform=test_transform)
-            test_data = TinyImageNetPair(root=os.path.join(dataset_location, "val"), transform=test_transform)
-        elif dataset_name == 'tiny_imagenet_true_label':
-            train_data = TinyImageNetPair_true_label(root=os.path.join(dataset_location, "train"), transform=train_transform)
-            memory_data = TinyImageNetPair_true_label(root=os.path.join(dataset_location, "train"), transform=test_transform)
-            test_data = TinyImageNetPair_true_label(root=os.path.join(dataset_location, "val"), transform=test_transform)
-        elif dataset_name == 'oxford_iiit_pet':
-            train_data = OxfordIIITPetDataset(root=os.path.join(dataset_location, "images"), transform=train_transform)
-            memory_data = OxfordIIITPetDataset(root=os.path.join(dataset_location, "images"), transform=test_transform)
-            test_data = OxfordIIITPetDataset(root=os.path.join(dataset_location, "images"), transform=test_transform)
-        else:
-            raise Exception('Invalid dataset name')
+        return train_data, memory_data, test_data
     else:
-        if dataset_name in ['tiny_imagenet', 'tiny_imagenet_true_label', 'oxford_iiit_pet']:
-            train_data = ImageFolder(root=os.path.join(dataset_location, "images"), transform=train_transform)
-            memory_data = ImageFolder(root=os.path.join(dataset_location, "images"), transform=test_transform)
-            test_data = ImageFolder(root=os.path.join(dataset_location, "images"), transform=test_transform)
-        else:
-            raise Exception('Invalid dataset name')
+        raise ValueError(f"Dataset '{dataset_name}' is not supported.")
 
-    # Subsample dataset indices randomly
-    # train_indices = random.sample(range(len(train_data)), min(5000, len(train_data)))
-    # memory_indices = random.sample(range(len(memory_data)), min(500, len(memory_data)))
-    # test_indices = random.sample(range(len(test_data)), min(500, len(test_data)))
-
-    # Apply subsampling using Subset
-    train_data = Subset(train_data, train_indices)
-    memory_data = Subset(memory_data, memory_indices)
-    test_data = Subset(test_data, test_indices)
-
-    return train_data, memory_data, test_data
